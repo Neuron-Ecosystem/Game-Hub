@@ -35,7 +35,11 @@ class NeuronGameHub {
     loadAchievements() {
         const saved = localStorage.getItem('neuronGameAchievements');
         if (saved) {
-            this.achievements = JSON.parse(saved);
+            const savedAchievements = JSON.parse(saved);
+            this.achievements = this.achievements.map(achievement => {
+                const savedAchievement = savedAchievements.find(a => a.id === achievement.id);
+                return savedAchievement ? { ...achievement, ...savedAchievement } : achievement;
+            });
         }
     }
 
@@ -45,6 +49,8 @@ class NeuronGameHub {
 
     displayGames() {
         const container = document.getElementById('gamesContainer');
+        if (!container) return;
+
         container.innerHTML = this.games.map(game => `
             <div class="game-card" onclick="app.openGame('${game.id}')">
                 <div class="game-icon">${game.icon}</div>
@@ -65,6 +71,8 @@ class NeuronGameHub {
 
     displayAchievements() {
         const container = document.getElementById('achievementsContainer');
+        if (!container) return;
+
         container.innerHTML = this.achievements.map(achievement => `
             <div class="achievement-card ${achievement.unlocked ? '' : 'locked'}">
                 <div class="achievement-icon">${achievement.icon}</div>
@@ -120,16 +128,6 @@ class NeuronGameHub {
                         break;
                 }
             }, 100);
-        } else {
-            document.getElementById('gameContent').innerHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <div style="font-size: 4rem; margin-bottom: 20px;">${game.icon}</div>
-                    <h3>${game.title}</h3>
-                    <p>Эта игра скоро будет доступна!</p>
-                    <p style="color: var(--text-secondary); margin-top: 20px;">Мы активно работаем над её созданием.</p>
-                    <button class="btn btn-primary" onclick="closeGameModal()" style="margin-top: 20px;">Вернуться к играм</button>
-                </div>
-            `;
         }
 
         document.getElementById('gameModal').classList.add('active');
@@ -193,37 +191,44 @@ class NeuronGameHub {
         });
 
         // Search functionality
-        document.getElementById('gameSearch').addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const gameCards = document.querySelectorAll('.game-card');
-            
-            gameCards.forEach(card => {
-                const title = card.querySelector('.game-title').textContent.toLowerCase();
-                const description = card.querySelector('.game-description').textContent.toLowerCase();
+        const searchInput = document.getElementById('gameSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const gameCards = document.querySelectorAll('.game-card');
                 
-                if (title.includes(searchTerm) || description.includes(searchTerm)) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
+                gameCards.forEach(card => {
+                    const title = card.querySelector('.game-title').textContent.toLowerCase();
+                    const description = card.querySelector('.game-description').textContent.toLowerCase();
+                    
+                    if (title.includes(searchTerm) || description.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
             });
-        });
+        }
     }
 
     loadStatistics() {
         // Update recent scores
         const recentScores = document.getElementById('recentScores');
-        recentScores.innerHTML = Object.entries(this.stats.bestScores)
-            .slice(0, 5)
-            .map(([game, score]) => {
-                const gameInfo = this.games.find(g => g.id === game);
-                return `
-                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
-                        <span>${gameInfo?.title || game}</span>
-                        <span style="color: var(--primary-color);">${score}</span>
-                    </div>
-                `;
-            }).join('') || '<p style="color: var(--text-secondary); text-align: center;">Нет данных</p>';
+        if (recentScores) {
+            const scores = Object.entries(this.stats.bestScores)
+                .slice(0, 5)
+                .map(([game, score]) => {
+                    const gameInfo = this.games.find(g => g.id === game);
+                    return `
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <span>${gameInfo?.title || game}</span>
+                            <span style="color: var(--primary-color);">${score}</span>
+                        </div>
+                    `;
+                }).join('') || '<p style="color: var(--text-secondary); text-align: center;">Нет данных</p>';
+            
+            recentScores.innerHTML = scores;
+        }
     }
 }
 
@@ -298,8 +303,10 @@ class Game2048 {
             if (this.score > this.bestScore) {
                 this.bestScore = this.score;
                 localStorage.setItem('best2048', this.bestScore.toString());
-                app.stats.bestScores['neuron-2048'] = this.bestScore;
-                app.saveStats();
+                if (app && app.stats) {
+                    app.stats.bestScores['neuron-2048'] = this.bestScore;
+                    app.saveStats();
+                }
                 showNotification('🎉 Новый рекорд!');
             }
             
@@ -429,7 +436,12 @@ class Game2048 {
                 tile.className = 'tile';
                 if (this.grid[i][j] !== 0) {
                     tile.textContent = this.grid[i][j];
-                    tile.classList.add(`tile-${this.grid[i][j]}`);
+                    const tileClass = `tile-${this.grid[i][j]}`;
+                    if (this.grid[i][j] <= 2048) {
+                        tile.classList.add(tileClass);
+                    } else {
+                        tile.classList.add('tile-2048');
+                    }
                 }
                 gridElement.appendChild(tile);
             }
@@ -533,8 +545,10 @@ class MemoryGame {
         } else {
             // No match
             setTimeout(() => {
-                document.querySelector(`.memory-card[data-index="${card1.index}"]`).classList.remove('flipped');
-                document.querySelector(`.memory-card[data-index="${card2.index}"]`).classList.remove('flipped');
+                const card1Element = document.querySelector(`.memory-card[data-index="${card1.index}"]`);
+                const card2Element = document.querySelector(`.memory-card[data-index="${card2.index}"]`);
+                if (card1Element) card1Element.classList.remove('flipped');
+                if (card2Element) card2Element.classList.remove('flipped');
                 this.flippedCards = [];
             }, 1000);
         }
@@ -557,8 +571,10 @@ class MemoryGame {
         const bestTime = localStorage.getItem('bestMemoryTime');
         if (!bestTime || this.timer < parseInt(bestTime)) {
             localStorage.setItem('bestMemoryTime', this.timer.toString());
-            app.stats.bestScores['memory-cards'] = this.timer;
-            app.saveStats();
+            if (app && app.stats) {
+                app.stats.bestScores['memory-cards'] = this.timer;
+                app.saveStats();
+            }
             showNotification('🏆 Новый рекорд времени!');
         }
     }
@@ -607,6 +623,7 @@ class TypingGame {
         if (input) {
             input.value = '';
             input.disabled = false;
+            input.addEventListener('input', (e) => this.handleInput(e.target.value));
             input.focus();
         }
     }
@@ -653,7 +670,9 @@ class TypingGame {
             
             if (this.currentCharIndex > 0) {
                 const prevSpan = spans[this.currentCharIndex - 1];
-                prevSpan.className = prevSpan.textContent === inputText[this.currentCharIndex - 1] ? 'correct-char' : 'incorrect-char';
+                if (prevSpan) {
+                    prevSpan.className = prevSpan.textContent === inputText[this.currentCharIndex - 1] ? 'correct-char' : 'incorrect-char';
+                }
             }
             
             if (this.currentCharIndex < spans.length) {
@@ -718,7 +737,7 @@ class TypingGame {
     }
 }
 
-// ==================== SIMPLE MATH GAME ====================
+// ==================== MATH GAME ====================
 class MathGame {
     constructor() {
         this.score = 0;
@@ -732,9 +751,15 @@ class MathGame {
         this.score = 0;
         this.timeLeft = 30;
         this.isPlaying = false;
+        
+        // Load best score
+        const bestScore = localStorage.getItem('bestMathScore') || '0';
+        if (document.getElementById('mathBest')) {
+            document.getElementById('mathBest').textContent = bestScore;
+        }
+        
         this.generateProblem();
         this.updateDisplay();
-        
         this.startGame();
     }
 
@@ -766,36 +791,15 @@ class MathGame {
     }
 
     renderProblem() {
-        const container = document.getElementById('mathContent');
-        if (!container) return;
-
-        container.innerHTML = `
-            <div style="text-align: center;">
-                <div style="font-size: 3rem; margin: 20px 0;">
-                    ${this.currentProblem.a} ${this.currentProblem.operation} ${this.currentProblem.b} = ?
-                </div>
-                <input type="number" id="mathAnswer" placeholder="Введите ответ" style="
-                    padding: 15px;
-                    font-size: 1.2rem;
-                    width: 200px;
-                    text-align: center;
-                    border: 2px solid var(--primary-color);
-                    border-radius: 8px;
-                    background: var(--background);
-                    color: var(--text-primary);
-                ">
-                <button class="btn btn-primary" onclick="checkMathAnswer()" style="margin-left: 10px;">Проверить</button>
-            </div>
-        `;
-
+        const problemElement = document.getElementById('mathProblem');
+        if (problemElement) {
+            problemElement.textContent = `${this.currentProblem.a} ${this.currentProblem.operation} ${this.currentProblem.b} = ?`;
+        }
+        
         const input = document.getElementById('mathAnswer');
         if (input) {
+            input.value = '';
             input.focus();
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    checkMathAnswer();
-                }
-            });
         }
     }
 
@@ -836,8 +840,10 @@ class MathGame {
         const bestScore = localStorage.getItem('bestMathScore');
         if (!bestScore || this.score > parseInt(bestScore)) {
             localStorage.setItem('bestMathScore', this.score.toString());
-            app.stats.bestScores['math-challenge'] = this.score;
-            app.saveStats();
+            if (app && app.stats) {
+                app.stats.bestScores['math-challenge'] = this.score;
+                app.saveStats();
+            }
             showNotification('🎉 Новый рекорд!');
         }
     }
@@ -866,26 +872,29 @@ class AimTrainer {
         this.timeLeft = 30;
         this.isPlaying = false;
         
+        // Load best score
+        const bestScore = localStorage.getItem('bestAimScore') || '0';
+        if (document.getElementById('aimBest')) {
+            document.getElementById('aimBest').textContent = bestScore;
+        }
+        
         this.renderGame();
         this.updateDisplay();
         this.startGame();
     }
 
     renderGame() {
-        const container = document.getElementById('aimContent');
+        const container = document.getElementById('aimArea');
         if (!container) return;
 
         container.innerHTML = `
-            <div style="position: relative; width: 100%; height: 400px; background: var(--surface-light); border-radius: 12px; overflow: hidden; cursor: crosshair;" id="aimArea">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-secondary);">
-                    Кликайте по появляющимся целям!
-                </div>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-secondary);">
+                Кликайте по появляющимся целям!
             </div>
         `;
 
-        const aimArea = document.getElementById('aimArea');
-        aimArea.addEventListener('click', (e) => {
-            if (e.target === aimArea && this.isPlaying) {
+        container.addEventListener('click', (e) => {
+            if (e.target === container && this.isPlaying) {
                 this.score = Math.max(0, this.score - 5);
                 this.updateDisplay();
             }
@@ -961,8 +970,10 @@ class AimTrainer {
         const bestScore = localStorage.getItem('bestAimScore');
         if (!bestScore || this.score > parseInt(bestScore)) {
             localStorage.setItem('bestAimScore', this.score.toString());
-            app.stats.bestScores['aim-trainer'] = this.score;
-            app.saveStats();
+            if (app && app.stats) {
+                app.stats.bestScores['aim-trainer'] = this.score;
+                app.saveStats();
+            }
             showNotification('🎉 Новый рекорд!');
         }
     }
@@ -975,186 +986,6 @@ class AimTrainer {
         }
     }
 }
-
-// ==================== GAME TEMPLATES ====================
-const gameTemplates = {
-    'neuron-2048': `
-        <div class="game-container">
-            <div class="game-stats">
-                <div class="game-stat">
-                    <div class="game-stat-value" id="score2048">0</div>
-                    <div class="game-stat-label">Счёт</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="best2048">0</div>
-                    <div class="game-stat-label">Лучший</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="moves2048">0</div>
-                    <div class="game-stat-label">Ходы</div>
-                </div>
-            </div>
-            
-            <div class="game-board">
-                <div class="grid-2048" id="grid2048"></div>
-            </div>
-            
-            <div class="game-controls">
-                <button class="btn btn-primary" onclick="start2048()">Новая игра</button>
-                <button class="btn btn-secondary" onclick="showInstructions2048()">Инструкция</button>
-            </div>
-            
-            <div id="instructions2048" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
-                <h4>🎮 Как играть в 2048:</h4>
-                <p>• Используйте <strong>стрелки клавиатуры</strong> для перемещения плиток</p>
-                <p>• Когда две плитки с одинаковым числом соприкасаются, они сливаются в одну!</p>
-                <p>• Цель: получить плитку <strong>2048</strong></p>
-                <p>• Объединяйте плитки стратегически, чтобы не заполнить всё поле</p>
-            </div>
-        </div>
-    `,
-    
-    'memory-cards': `
-        <div class="game-container">
-            <div class="game-stats">
-                <div class="game-stat">
-                    <div class="game-stat-value" id="pairsFound">0</div>
-                    <div class="game-stat-label">Найдено пар</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="attemptsCount">0</div>
-                    <div class="game-stat-label">Попытки</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="timerMemory">0</div>
-                    <div class="game-stat-label">Время</div>
-                </div>
-            </div>
-            
-            <div class="game-board">
-                <div class="grid-memory" id="gridMemory"></div>
-            </div>
-            
-            <div class="game-controls">
-                <button class="btn btn-primary" onclick="startMemoryGame()">Новая игра</button>
-                <button class="btn btn-secondary" onclick="showInstructionsMemory()">Инструкция</button>
-            </div>
-            
-            <div id="instructionsMemory" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
-                <h4>🎮 Как играть в Memory:</h4>
-                <p>• Кликайте на карточки, чтобы перевернуть их</p>
-                <p>• Найдите <strong>пары одинаковых символов</strong></p>
-                <p>• Запоминайте расположение карточек</p>
-                <p>• Цель: найти все пары за минимальное время</p>
-            </div>
-        </div>
-    `,
-    
-    'typing-master': `
-        <div class="game-container">
-            <div class="game-stats">
-                <div class="game-stat">
-                    <div class="game-stat-value" id="wpm">0</div>
-                    <div class="game-stat-label">Слов/мин</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="accuracy">100%</div>
-                    <div class="game-stat-label">Точность</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="timerTyping">60</div>
-                    <div class="game-stat-label">Секунды</div>
-                </div>
-            </div>
-            
-            <div class="typing-container">
-                <div class="typing-text" id="typingText"></div>
-                <input type="text" class="typing-input" id="typingInput" placeholder="Начните печатать здесь...">
-            </div>
-            
-            <div class="game-controls">
-                <button class="btn btn-primary" onclick="startTypingGame()">Новая игра</button>
-                <button class="btn btn-secondary" onclick="showInstructionsTyping()">Инструкция</button>
-            </div>
-            
-            <div id="instructionsTyping" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
-                <h4>🎮 Как играть в Typing Master:</h4>
-                <p>• Печатайте текст, который видите на экране</p>
-                <p>• Следите за <strong>скоростью (WPM)</strong> и <strong>точностью</strong></p>
-                <p>• Игра длится 60 секунд</p>
-                <p>• Цель: набрать максимальную скорость с высокой точностью</p>
-            </div>
-        </div>
-    `,
-
-    'math-challenge': `
-        <div class="game-container">
-            <div class="game-stats">
-                <div class="game-stat">
-                    <div class="game-stat-value" id="mathScore">0</div>
-                    <div class="game-stat-label">Счёт</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="mathTime">30</div>
-                    <div class="game-stat-label">Время</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="mathBest">0</div>
-                    <div class="game-stat-label">Лучший</div>
-                </div>
-            </div>
-            
-            <div id="mathContent"></div>
-            
-            <div class="game-controls">
-                <button class="btn btn-primary" onclick="startMathGame()">Новая игра</button>
-                <button class="btn btn-secondary" onclick="showInstructionsMath()">Инструкция</button>
-            </div>
-            
-            <div id="instructionsMath" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
-                <h4>🎮 Как играть в Math Challenge:</h4>
-                <p>• Решайте математические примеры</p>
-                <p>• Вводите ответ в поле и нажимайте "Проверить"</p>
-                <p>• За правильный ответ: <strong>+10 очков</strong></p>
-                <p>• Цель: набрать максимум очков за 30 секунд</p>
-            </div>
-        </div>
-    `,
-
-    'aim-trainer': `
-        <div class="game-container">
-            <div class="game-stats">
-                <div class="game-stat">
-                    <div class="game-stat-value" id="aimScore">0</div>
-                    <div class="game-stat-label">Счёт</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="aimTargets">0</div>
-                    <div class="game-stat-label">Цели</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="aimTime">30</div>
-                    <div class="game-stat-label">Время</div>
-                </div>
-            </div>
-            
-            <div id="aimContent"></div>
-            
-            <div class="game-controls">
-                <button class="btn btn-primary" onclick="startAimTrainer()">Новая игра</button>
-                <button class="btn btn-secondary" onclick="showInstructionsAim()">Инструкция</button>
-            </div>
-            
-            <div id="instructionsAim" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
-                <h4>🎮 Как играть в Aim Trainer:</h4>
-                <p>• Кликайте по <strong>красным целям</strong>, которые появляются на экране</p>
-                <p>• За каждую цель: <strong>+10 очков</strong></p>
-                <p>• Промах: <strong>-5 очков</strong></p>
-                <p>• Цель: набрать максимум очков за 30 секунд</p>
-            </div>
-        </div>
-    `
-};
 
 // ==================== GLOBAL GAME INSTANCES ====================
 let game2048;
@@ -1172,6 +1003,8 @@ function init2048() {
 function start2048() {
     if (game2048) {
         game2048.init();
+    } else {
+        init2048();
     }
 }
 
@@ -1183,58 +1016,47 @@ function initMemoryGame() {
 function startMemoryGame() {
     if (memoryGame) {
         memoryGame.init();
+    } else {
+        initMemoryGame();
     }
 }
 
 function initTypingGame() {
     typingGame = new TypingGame();
     typingGame.init();
-    
-    const input = document.getElementById('typingInput');
-    if (input) {
-        input.addEventListener('input', (e) => {
-            typingGame.handleInput(e.target.value);
-        });
-    }
 }
 
 function startTypingGame() {
     if (typingGame) {
         typingGame.init();
+    } else {
+        initTypingGame();
     }
 }
 
 function initMathGame() {
     mathGame = new MathGame();
     mathGame.init();
-    
-    // Load best score
-    const bestScore = localStorage.getItem('bestMathScore') || '0';
-    if (document.getElementById('mathBest')) {
-        document.getElementById('mathBest').textContent = bestScore;
-    }
 }
 
 function startMathGame() {
     if (mathGame) {
         mathGame.init();
+    } else {
+        initMathGame();
     }
 }
 
 function initAimTrainer() {
     aimTrainer = new AimTrainer();
     aimTrainer.init();
-    
-    // Load best score
-    const bestScore = localStorage.getItem('bestAimScore') || '0';
-    if (document.getElementById('aimBest')) {
-        document.getElementById('aimBest').textContent = bestScore;
-    }
 }
 
 function startAimTrainer() {
     if (aimTrainer) {
         aimTrainer.init();
+    } else {
+        initAimTrainer();
     }
 }
 
@@ -1243,34 +1065,42 @@ function checkMathAnswer() {
     const input = document.getElementById('mathAnswer');
     if (input && mathGame) {
         mathGame.checkAnswer(input.value);
-        input.value = '';
-        input.focus();
     }
 }
 
 function showInstructions2048() {
     const element = document.getElementById('instructions2048');
-    element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    if (element) {
+        element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    }
 }
 
 function showInstructionsMemory() {
     const element = document.getElementById('instructionsMemory');
-    element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    if (element) {
+        element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    }
 }
 
 function showInstructionsTyping() {
     const element = document.getElementById('instructionsTyping');
-    element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    if (element) {
+        element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    }
 }
 
 function showInstructionsMath() {
     const element = document.getElementById('instructionsMath');
-    element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    if (element) {
+        element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    }
 }
 
 function showInstructionsAim() {
     const element = document.getElementById('instructionsAim');
-    element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    if (element) {
+        element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    }
 }
 
 function closeGameModal() {
@@ -1324,17 +1154,19 @@ document.addEventListener('keydown', (e) => {
 
 // Add XP to player
 function addXP(amount) {
-    app.stats.playerXP += amount;
-    const xpForNextLevel = app.stats.playerLevel * 100;
-    
-    if (app.stats.playerXP >= xpForNextLevel) {
-        app.stats.playerLevel++;
-        app.stats.playerXP -= xpForNextLevel;
-        showNotification(`🎉 Поздравляем! Вы достигли ${app.stats.playerLevel} уровня!`);
+    if (app && app.stats) {
+        app.stats.playerXP += amount;
+        const xpForNextLevel = app.stats.playerLevel * 100;
+        
+        if (app.stats.playerXP >= xpForNextLevel) {
+            app.stats.playerLevel++;
+            app.stats.playerXP -= xpForNextLevel;
+            showNotification(`🎉 Поздравляем! Вы достигли ${app.stats.playerLevel} уровня!`);
+        }
+        
+        app.saveStats();
+        app.updateStatsDisplay();
     }
-    
-    app.saveStats();
-    app.updateStatsDisplay();
 }
 
 // Notification system
