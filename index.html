@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neuron Game Hub - Игровая экосистема</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <h1>Neuron Game Hub</h1>
+                <span>Играй • Развивайся • Побеждай</span>
+            </div>
+            <nav class="nav">
+                <a href="#games" class="nav-link active">Все игры</a>
+                <a href="#stats" class="nav-link">Моя статистика</a>
+                <a href="#achievements" class="nav-link">Достижения</a>
+            </nav>
+        </header>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+            <div class="stat-card">
+                <span class="stat-label">Всего игр</span>
+                <span class="stat-value" id="totalGames">6</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Лучший счёт</span>
+                <span class="stat-value" id="bestScore">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Уровень</span>
+                <span class="stat-value" id="playerLevel">1</span>
+            </div>
+        </div>
+
+        <!-- Games Grid -->
+        <main class="main-content">
+            <section id="games" class="section active">
+                <div class="section-header">
+                    <h2>Игровая коллекция</h2>
+                    <div class="search-box">
+                        <input type="text" id="gameSearch" placeholder="Поиск игры...">
+                    </div>
+                </div>
+                
+                <div class="games-grid" id="gamesContainer">
+                    <!-- Games will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Statistics Section -->
+            <section id="stats" class="section">
+                <div class="section-header">
+                    <h2>Моя игровая статистика</h2>
+                </div>
+                <div class="stats-container">
+                    <div class="chart-container">
+                        <h3>Время по играм</h3>
+                        <canvas id="timeChart"></canvas>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <h4>Последние рекорды</h4>
+                            <div id="recentScores"></div>
+                        </div>
+                        <div class="stat-item">
+                            <h4>Прогресс уровня</h4>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="levelProgress"></div>
+                            </div>
+                            <div class="progress-info">
+                                <span>Уровень <span id="currentLevel">1</span></span>
+                                <span><span id="currentXP">0</span>/<span id="nextLevelXP">100</span> XP</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Achievements Section -->
+            <section id="achievements" class="section">
+                <div class="section-header">
+                    <h2>Достижения</h2>
+                </div>
+                <div class="achievements-grid" id="achievementsContainer">
+                    <!-- Achievements will be loaded here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Game Modals -->
+    <div id="gameModal" class="modal">
+        <div class="modal-content game-modal">
+            <div class="modal-header">
+                <h3 id="modalGameTitle">Название игры</h3>
+                <button class="close-btn" onclick="closeGameModal()">×</button>
+            </div>
+            <div class="modal-body" id="gameContent">
+                <!-- Game content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="games.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
