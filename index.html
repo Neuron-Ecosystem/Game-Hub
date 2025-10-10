@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neuron Game Hub - Игровая экосистема</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -70,7 +71,7 @@
                         <div class="stat-item">
                             <h4>Прогресс уровня</h4>
                             <div class="progress-bar">
-                                <div class="progress-fill" id="levelProgress"></div>
+                                <div class="progress-fill" id="levelProgress" style="width: 0%"></div>
                             </div>
                             <div class="progress-info">
                                 <span>Уровень <span id="currentLevel">1</span></span>
@@ -106,7 +107,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="games.js"></script>
     <script src="script.js"></script>
 </body>
