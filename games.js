@@ -125,13 +125,15 @@ const gameTemplates = {
             
             <div class="game-controls">
                 <button class="btn btn-primary" onclick="start2048()">Новая игра</button>
-                <button class="btn btn-secondary" onclick="showInstructions('2048')">Инструкция</button>
+                <button class="btn btn-secondary" onclick="showInstructions2048()">Инструкция</button>
             </div>
             
             <div id="instructions2048" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
-                <h4>Как играть в 2048:</h4>
-                <p>Используйте стрелки клавиатуры для перемещения плиток. Когда две плитки с одинаковым числом соприкасаются, они сливаются в одну!</p>
-                <p>Цель: получить плитку 2048</p>
+                <h4>🎮 Как играть в 2048:</h4>
+                <p>• Используйте <strong>стрелки клавиатуры</strong> для перемещения плиток</p>
+                <p>• Когда две плитки с одинаковым числом соприкасаются, они сливаются в одну!</p>
+                <p>• Цель: получить плитку <strong>2048</strong></p>
+                <p>• Объединяйте плитки стратегически, чтобы не заполнить всё поле</p>
             </div>
         </div>
     `,
@@ -159,7 +161,15 @@ const gameTemplates = {
             
             <div class="game-controls">
                 <button class="btn btn-primary" onclick="startMemoryGame()">Новая игра</button>
-                <button class="btn btn-secondary" onclick="showInstructions('Memory')">Инструкция</button>
+                <button class="btn btn-secondary" onclick="showInstructionsMemory()">Инструкция</button>
+            </div>
+            
+            <div id="instructionsMemory" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
+                <h4>🎮 Как играть в Memory:</h4>
+                <p>• Кликайте на карточки, чтобы перевернуть их</p>
+                <p>• Найдите <strong>пары одинаковых символов</strong></p>
+                <p>• Запоминайте расположение карточек</p>
+                <p>• Цель: найти все пары за минимальное время</p>
             </div>
         </div>
     `,
@@ -187,208 +197,107 @@ const gameTemplates = {
             </div>
             
             <div class="game-controls">
-                <button class="btn btn-primary" onclick="startTypingTest()">Начать тест</button>
-                <button class="btn btn-secondary" onclick="showInstructions('Typing')">Инструкция</button>
+                <button class="btn btn-primary" onclick="startTypingGame()">Новая игра</button>
+                <button class="btn btn-secondary" onclick="showInstructionsTyping()">Инструкция</button>
+            </div>
+            
+            <div id="instructionsTyping" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
+                <h4>🎮 Как играть в Typing Master:</h4>
+                <p>• Печатайте текст, который видите на экране</p>
+                <p>• Следите за <strong>скоростью (WPM)</strong> и <strong>точностью</strong></p>
+                <p>• Игра длится 60 секунд</p>
+                <p>• Цель: набрать максимальную скорость с высокой точностью</p>
+            </div>
+        </div>
+    `,
+
+    'math-challenge': `
+        <div class="game-container">
+            <div class="game-stats">
+                <div class="game-stat">
+                    <div class="game-stat-value" id="mathScore">0</div>
+                    <div class="game-stat-label">Счёт</div>
+                </div>
+                <div class="game-stat">
+                    <div class="game-stat-value" id="mathTime">30</div>
+                    <div class="game-stat-label">Время</div>
+                </div>
+                <div class="game-stat">
+                    <div class="game-stat-value" id="mathBest">0</div>
+                    <div class="game-stat-label">Лучший</div>
+                </div>
+            </div>
+            
+            <div class="math-container">
+                <div class="math-problem" id="mathProblem">5 + 3 = ?</div>
+                <div style="display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <input type="number" class="math-input" id="mathAnswer" placeholder="Ответ">
+                    <button class="btn btn-primary" onclick="checkMathAnswer()">Проверить</button>
+                </div>
+            </div>
+            
+            <div class="game-controls">
+                <button class="btn btn-primary" onclick="startMathGame()">Новая игра</button>
+                <button class="btn btn-secondary" onclick="showInstructionsMath()">Инструкция</button>
+            </div>
+            
+            <div id="instructionsMath" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
+                <h4>🎮 Как играть в Math Challenge:</h4>
+                <p>• Решайте математические примеры</p>
+                <p>• Вводите ответ в поле и нажимайте "Проверить"</p>
+                <p>• За правильный ответ: <strong>+10 очков</strong></p>
+                <p>• Цель: набрать максимум очков за 30 секунд</p>
+            </div>
+        </div>
+    `,
+
+    'aim-trainer': `
+        <div class="game-container">
+            <div class="game-stats">
+                <div class="game-stat">
+                    <div class="game-stat-value" id="aimScore">0</div>
+                    <div class="game-stat-label">Счёт</div>
+                </div>
+                <div class="game-stat">
+                    <div class="game-stat-value" id="aimTargets">0</div>
+                    <div class="game-stat-label">Цели</div>
+                </div>
+                <div class="game-stat">
+                    <div class="game-stat-value" id="aimTime">30</div>
+                    <div class="game-stat-label">Время</div>
+                </div>
+            </div>
+            
+            <div class="aim-container" id="aimArea">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-secondary);">
+                    Кликайте по появляющимся целям!
+                </div>
+            </div>
+            
+            <div class="game-controls">
+                <button class="btn btn-primary" onclick="startAimTrainer()">Новая игра</button>
+                <button class="btn btn-secondary" onclick="showInstructionsAim()">Инструкция</button>
+            </div>
+            
+            <div id="instructionsAim" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
+                <h4>🎮 Как играть в Aim Trainer:</h4>
+                <p>• Кликайте по <strong>красным целям</strong>, которые появляются на экране</p>
+                <p>• За каждую цель: <strong>+10 очков</strong></p>
+                <p>• Промах: <strong>-5 очков</strong></p>
+                <p>• Цель: набрать максимум очков за 30 секунд</p>
+            </div>
+        </div>
+    `,
+
+    'code-puzzle': `
+        <div class="game-container">
+            <div style="text-align: center; padding: 40px;">
+                <div style="font-size: 4rem; margin-bottom: 20px;">💻</div>
+                <h3>Code Puzzle</h3>
+                <p>Скоро будет доступно!</p>
+                <p style="color: var(--text-secondary); margin-top: 20px;">Мы работаем над созданием увлекательных программистских головоломок.</p>
+                <button class="btn btn-primary" onclick="closeGameModal()" style="margin-top: 20px;">Вернуться к играм</button>
             </div>
         </div>
     `
 };
-
-// Game Logic Functions
-class Game2048 {
-    constructor() {
-        this.grid = [];
-        this.score = 0;
-        this.bestScore = parseInt(localStorage.getItem('best2048') || '0');
-        this.moves = 0;
-        this.init();
-    }
-
-    init() {
-        this.grid = Array(4).fill().map(() => Array(4).fill(0));
-        this.score = 0;
-        this.moves = 0;
-        this.addRandomTile();
-        this.addRandomTile();
-        this.updateDisplay();
-    }
-
-    addRandomTile() {
-        const emptyCells = [];
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
-                if (this.grid[i][j] === 0) {
-                    emptyCells.push({i, j});
-                }
-            }
-        }
-
-        if (emptyCells.length > 0) {
-            const {i, j} = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-            this.grid[i][j] = Math.random() < 0.9 ? 2 : 4;
-        }
-    }
-
-    move(direction) {
-        let moved = false;
-        const oldGrid = this.grid.map(row => [...row]);
-
-        // Implement move logic based on direction
-        // This is a simplified version - you'd implement full 2048 logic here
-
-        if (this.gridChanged(oldGrid)) {
-            this.moves++;
-            this.addRandomTile();
-            moved = true;
-        }
-
-        this.updateDisplay();
-        return moved;
-    }
-
-    gridChanged(oldGrid) {
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
-                if (oldGrid[i][j] !== this.grid[i][j]) return true;
-            }
-        }
-        return false;
-    }
-
-    updateDisplay() {
-        const gridElement = document.getElementById('grid2048');
-        gridElement.innerHTML = '';
-
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
-                const tile = document.createElement('div');
-                tile.className = 'tile';
-                if (this.grid[i][j] !== 0) {
-                    tile.textContent = this.grid[i][j];
-                    tile.classList.add(`tile-${this.grid[i][j]}`);
-                }
-                gridElement.appendChild(tile);
-            }
-        }
-
-        document.getElementById('score2048').textContent = this.score;
-        document.getElementById('moves2048').textContent = this.moves;
-        document.getElementById('best2048').textContent = this.bestScore;
-
-        if (this.score > this.bestScore) {
-            this.bestScore = this.score;
-            localStorage.setItem('best2048', this.bestScore.toString());
-        }
-    }
-}
-
-// Global game instances
-let game2048;
-let memoryGame;
-let typingGame;
-
-// Initialize games
-function init2048() {
-    game2048 = new Game2048();
-}
-
-function start2048() {
-    game2048.init();
-}
-
-function startMemoryGame() {
-    // Initialize memory game
-    const symbols = ['🚀', '⭐', '🎮', '💻', '🎯', '🧩', '🎨', '🎵'];
-    const cards = [...symbols, ...symbols];
-    
-    // Shuffle cards
-    cards.sort(() => Math.random() - 0.5);
-    
-    const grid = document.getElementById('gridMemory');
-    grid.innerHTML = '';
-    
-    cards.forEach((symbol, index) => {
-        const card = document.createElement('div');
-        card.className = 'memory-card';
-        card.innerHTML = `
-            <div class="front">${symbol}</div>
-            <div class="back">?</div>
-        `;
-        card.addEventListener('click', () => flipCard(card, symbol));
-        grid.appendChild(card);
-    });
-    
-    // Reset stats
-    document.getElementById('pairsFound').textContent = '0';
-    document.getElementById('attemptsCount').textContent = '0';
-    document.getElementById('timerMemory').textContent = '0';
-}
-
-function startTypingTest() {
-    const texts = [
-        "Neuron Ecosystem создает инновационные проекты для образования и развлечений.",
-        "Программирование это искусство создания цифровых миров и решения сложных задач.",
-        "Игры развивают логическое мышление, креативность и стратегическое планирование."
-    ];
-    
-    const randomText = texts[Math.floor(Math.random() * texts.length)];
-    document.getElementById('typingText').innerHTML = '';
-    document.getElementById('typingInput').value = '';
-    document.getElementById('typingInput').disabled = false;
-    document.getElementById('typingInput').focus();
-    
-    // Display text with spans for each character
-    randomText.split('').forEach(char => {
-        const span = document.createElement('span');
-        span.textContent = char;
-        document.getElementById('typingText').appendChild(span);
-    });
-    
-    // Start timer
-    let timeLeft = 60;
-    document.getElementById('timerTyping').textContent = timeLeft;
-    
-    const timer = setInterval(() => {
-        timeLeft--;
-        document.getElementById('timerTyping').textContent = timeLeft;
-        
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            document.getElementById('typingInput').disabled = true;
-            calculateTypingStats();
-        }
-    }, 1000);
-}
-
-function showInstructions(game) {
-    const element = document.getElementById(`instructions${game}`);
-    if (element) {
-        element.style.display = element.style.display === 'none' ? 'block' : 'none';
-    }
-}
-
-// Utility functions
-function flipCard(card, symbol) {
-    card.classList.toggle('flipped');
-    // Add memory game logic here
-}
-
-function calculateTypingStats() {
-    // Calculate WPM and accuracy
-    const typedText = document.getElementById('typingInput').value;
-    const originalText = document.getElementById('typingText').textContent;
-    
-    let correctChars = 0;
-    for (let i = 0; i < Math.min(typedText.length, originalText.length); i++) {
-        if (typedText[i] === originalText[i]) {
-            correctChars++;
-        }
-    }
-    
-    const accuracy = (correctChars / originalText.length) * 100;
-    const words = typedText.split(' ').length;
-    const wpm = Math.round((words / 60) * 100); // Based on 60-second test
-    
-    document.getElementById('wpm').textContent = wpm;
-    document.getElementById('accuracy').textContent = `${accuracy.toFixed(1)}%`;
-}
