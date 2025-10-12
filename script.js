@@ -13,31 +13,48 @@ class NeuronGameHub {
         this.setupEventListeners();
         this.updateStatsDisplay();
         this.loadAchievements();
+        
+        // Initialize service worker for PWA capabilities
+        this.initServiceWorker();
+    }
+
+    initServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('Service Worker registered'))
+                .catch(err => console.log('Service Worker registration failed'));
+        }
     }
 
     loadStats() {
         try {
             const saved = localStorage.getItem('neuronGameHubStats');
-            return saved ? JSON.parse(saved) : {
-                totalGamesPlayed: 0,
-                bestScores: {},
-                timePlayed: {},
-                achievementsUnlocked: 0,
-                playerLevel: 1,
-                playerXP: 0,
-                gamesPlayed: {}
-            };
+            if (saved) {
+                const stats = JSON.parse(saved);
+                // Ensure all required fields exist
+                return {
+                    totalGamesPlayed: stats.totalGamesPlayed || 0,
+                    bestScores: stats.bestScores || {},
+                    timePlayed: stats.timePlayed || {},
+                    achievementsUnlocked: stats.achievementsUnlocked || 0,
+                    playerLevel: stats.playerLevel || 1,
+                    playerXP: stats.playerXP || 0,
+                    gamesPlayed: stats.gamesPlayed || {}
+                };
+            }
         } catch (e) {
-            return {
-                totalGamesPlayed: 0,
-                bestScores: {},
-                timePlayed: {},
-                achievementsUnlocked: 0,
-                playerLevel: 1,
-                playerXP: 0,
-                gamesPlayed: {}
-            };
+            console.log('Error loading stats, using defaults');
         }
+        
+        return {
+            totalGamesPlayed: 0,
+            bestScores: {},
+            timePlayed: {},
+            achievementsUnlocked: 0,
+            playerLevel: 1,
+            playerXP: 0,
+            gamesPlayed: {}
+        };
     }
 
     saveStats() {
@@ -79,13 +96,14 @@ class NeuronGameHub {
         }
 
         container.innerHTML = this.games.map(game => `
-            <div class="game-card" data-game-id="${game.id}">
-                <div class="game-icon">${game.icon}</div>
+            <div class="game-card" data-game-id="${game.id}" role="button" tabindex="0" 
+                 aria-label="${game.title}. ${game.description}">
+                <div class="game-icon" aria-hidden="true">${game.icon}</div>
                 <div class="game-title">${game.title}</div>
                 <div class="game-description">${game.description}</div>
                 <div class="game-meta">
                     <span>${game.category}</span>
-                    <div class="game-difficulty">
+                    <div class="game-difficulty" aria-label="Сложность: ${game.difficulty} из 5">
                         ${[1,2,3,4,5].map(i => `
                             <div class="difficulty-dot ${i <= game.difficulty ? 'active' : ''}"></div>
                         `).join('')}
@@ -95,11 +113,19 @@ class NeuronGameHub {
             </div>
         `).join('');
 
-        // Добавляем обработчики событий для карточек игр
+        // Add event listeners for game cards
         container.querySelectorAll('.game-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 const gameId = card.getAttribute('data-game-id');
                 this.openGame(gameId);
+            });
+            
+            card.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const gameId = card.getAttribute('data-game-id');
+                    this.openGame(gameId);
+                }
             });
         });
     }
@@ -109,8 +135,9 @@ class NeuronGameHub {
         if (!container) return;
 
         container.innerHTML = this.achievements.map(achievement => `
-            <div class="achievement-card ${achievement.unlocked ? '' : 'locked'}">
-                <div class="achievement-icon">${achievement.icon}</div>
+            <div class="achievement-card ${achievement.unlocked ? '' : 'locked'}" 
+                 aria-label="${achievement.title}. ${achievement.description} ${achievement.unlocked ? 'Разблокировано' : 'Заблокировано'}">
+                <div class="achievement-icon" aria-hidden="true">${achievement.icon}</div>
                 <div class="achievement-info">
                     <h4>${achievement.title}</h4>
                     <p>${achievement.description}</p>
@@ -158,7 +185,7 @@ class NeuronGameHub {
             // Initialize specific game
             setTimeout(() => {
                 this.initializeGame(gameId);
-            }, 50);
+            }, 100);
         } else {
             gameContent.innerHTML = `
                 <div style="text-align: center; padding: 40px;">
@@ -171,40 +198,59 @@ class NeuronGameHub {
             `;
         }
 
-        document.getElementById('gameModal').classList.add('active');
+        const modal = document.getElementById('gameModal');
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        
+        // Trap focus inside modal
+        this.trapFocus(modal);
     }
 
     initializeGame(gameId) {
         console.log('Initializing game:', gameId);
         switch(gameId) {
             case 'neuron-2048':
-                if (typeof init2048 === 'function') {
-                    init2048();
-                }
+                init2048();
                 break;
             case 'memory-cards':
-                if (typeof initMemoryGame === 'function') {
-                    initMemoryGame();
-                }
+                initMemoryGame();
                 break;
             case 'typing-master':
-                if (typeof initTypingGame === 'function') {
-                    initTypingGame();
-                }
+                initTypingGame();
                 break;
             case 'math-challenge':
-                if (typeof initMathGame === 'function') {
-                    initMathGame();
-                }
+                initMathGame();
                 break;
             case 'aim-trainer':
-                if (typeof initAimTrainer === 'function') {
-                    initAimTrainer();
-                }
+                initAimTrainer();
                 break;
             default:
                 console.log('Инициализация игры не требуется:', gameId);
         }
+    }
+
+    trapFocus(modal) {
+        const focusableElements = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        modal.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                if (e.shiftKey) {
+                    if (document.activeElement === firstElement) {
+                        e.preventDefault();
+                        lastElement.focus();
+                    }
+                } else {
+                    if (document.activeElement === lastElement) {
+                        e.preventDefault();
+                        firstElement.focus();
+                    }
+                }
+            }
+        });
+
+        firstElement.focus();
     }
 
     unlockAchievement(achievementId) {
@@ -276,7 +322,7 @@ class NeuronGameHub {
         const searchInput = document.getElementById('gameSearch');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
-                const searchTerm = e.target.value.toLowerCase();
+                const searchTerm = e.target.value.toLowerCase().trim();
                 const gameCards = document.querySelectorAll('.game-card');
                 
                 gameCards.forEach(card => {
@@ -295,26 +341,29 @@ class NeuronGameHub {
         // Keyboard controls for 2048
         document.addEventListener('keydown', (e) => {
             if (window.game2048 && document.getElementById('gameModal').classList.contains('active')) {
-                switch(e.key) {
-                    case 'ArrowUp':
-                        e.preventDefault();
-                        window.game2048.move('up');
-                        break;
-                    case 'ArrowDown':
-                        e.preventDefault();
-                        window.game2048.move('down');
-                        break;
-                    case 'ArrowLeft':
-                        e.preventDefault();
-                        window.game2048.move('left');
-                        break;
-                    case 'ArrowRight':
-                        e.preventDefault();
-                        window.game2048.move('right');
-                        break;
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    e.preventDefault();
+                    const direction = e.key.replace('Arrow', '').toLowerCase();
+                    window.game2048.move(direction);
                 }
             }
         });
+
+        // Prevent zoom on mobile
+        document.addEventListener('touchstart', function(e) {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(e) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
     }
 
     loadStatistics() {
@@ -328,10 +377,10 @@ class NeuronGameHub {
                     return `
                         <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
                             <span>${gameInfo?.title || game}</span>
-                            <span style="color: var(--primary-color);">${score}</span>
+                            <span style="color: var(--primary-color); font-weight: bold;">${score}</span>
                         </div>
                     `;
-                }).join('') || '<p style="color: var(--text-secondary); text-align: center;">Нет данных</p>';
+                }).join('') || '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">Нет данных об играх</p>';
             
             recentScores.innerHTML = scores;
         }
@@ -358,33 +407,22 @@ class NeuronGameHub {
 
         const notification = document.createElement('div');
         notification.className = 'notification';
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--secondary-color);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            z-index: 10000;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            max-width: 300px;
-        `;
+        notification.setAttribute('aria-live', 'polite');
         notification.textContent = message;
         
         document.body.appendChild(notification);
         
+        // Animate in
         setTimeout(() => {
             notification.style.transform = 'translateX(0)';
         }, 100);
         
+        // Auto remove after 3 seconds
         setTimeout(() => {
             notification.style.transform = 'translateX(100%)';
             setTimeout(() => {
                 if (notification.parentNode) {
-                    document.body.removeChild(notification);
+                    notification.remove();
                 }
             }, 300);
         }, 3000);
@@ -397,6 +435,7 @@ class NeuronGameHub {
 function init2048() {
     console.log('Initializing 2048...');
     window.game2048 = new Game2048();
+    window.game2048.init();
 }
 
 function start2048() {
@@ -411,6 +450,7 @@ function start2048() {
 function initMemoryGame() {
     console.log('Initializing Memory Game...');
     window.memoryGame = new MemoryGame();
+    window.memoryGame.init();
 }
 
 function startMemoryGame() {
@@ -425,6 +465,7 @@ function startMemoryGame() {
 function initTypingGame() {
     console.log('Initializing Typing Game...');
     window.typingGame = new TypingGame();
+    window.typingGame.init();
 }
 
 function startTypingGame() {
@@ -439,6 +480,7 @@ function startTypingGame() {
 function initMathGame() {
     console.log('Initializing Math Game...');
     window.mathGame = new MathGame();
+    window.mathGame.init();
 }
 
 function startMathGame() {
@@ -453,6 +495,7 @@ function startMathGame() {
 function initAimTrainer() {
     console.log('Initializing Aim Trainer...');
     window.aimTrainer = new AimTrainer();
+    window.aimTrainer.init();
 }
 
 function startAimTrainer() {
@@ -510,6 +553,7 @@ function closeGameModal() {
     const modal = document.getElementById('gameModal');
     if (modal) {
         modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
     }
     
     // Stop all game timers
@@ -527,9 +571,15 @@ function closeGameModal() {
     }
 }
 
-// Close modal when clicking outside
+// Close modal when clicking outside or pressing Escape
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
+        closeGameModal();
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('gameModal').classList.contains('active')) {
         closeGameModal();
     }
 });
@@ -539,4 +589,18 @@ let app;
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Initializing Neuron Game Hub...');
     app = new NeuronGameHub();
+    window.app = app;
 });
+
+// Service Worker for PWA (optional)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+                console.log('ServiceWorker registration successful');
+            })
+            .catch(function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+    });
+}
