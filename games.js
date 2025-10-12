@@ -6,22 +6,26 @@ class Game2048 {
         this.bestScore = parseInt(localStorage.getItem('best2048') || '0');
         this.moves = 0;
         this.gameOver = false;
+        this.size = 4;
+        this.touchStartX = 0;
+        this.touchStartY = 0;
     }
 
     init() {
-        this.grid = Array(4).fill().map(() => Array(4).fill(0));
+        this.grid = Array(this.size).fill().map(() => Array(this.size).fill(0));
         this.score = 0;
         this.moves = 0;
         this.gameOver = false;
         this.addRandomTile();
         this.addRandomTile();
         this.updateDisplay();
+        this.setupTouchControls();
     }
 
     addRandomTile() {
         const emptyCells = [];
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
+        for (let i = 0; i < this.size; i++) {
+            for (let j = 0; j < this.size; j++) {
                 if (this.grid[i][j] === 0) {
                     emptyCells.push({i, j});
                 }
@@ -34,10 +38,48 @@ class Game2048 {
         }
     }
 
+    setupTouchControls() {
+        const gridElement = document.getElementById('grid2048');
+        if (!gridElement) return;
+
+        gridElement.addEventListener('touchstart', (e) => {
+            this.touchStartX = e.touches[0].clientX;
+            this.touchStartY = e.touches[0].clientY;
+            e.preventDefault();
+        }, { passive: false });
+
+        gridElement.addEventListener('touchend', (e) => {
+            if (!this.touchStartX || !this.touchStartY) return;
+
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            
+            const diffX = touchEndX - this.touchStartX;
+            const diffY = touchEndY - this.touchStartY;
+            
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                // Horizontal swipe
+                if (Math.abs(diffX) > 30) {
+                    this.move(diffX > 0 ? 'right' : 'left');
+                }
+            } else {
+                // Vertical swipe
+                if (Math.abs(diffY) > 30) {
+                    this.move(diffY > 0 ? 'down' : 'up');
+                }
+            }
+            
+            this.touchStartX = 0;
+            this.touchStartY = 0;
+            e.preventDefault();
+        }, { passive: false });
+    }
+
     move(direction) {
         if (this.gameOver) return false;
 
         let moved = false;
+        const oldGrid = this.grid.map(row => [...row]);
 
         switch(direction) {
             case 'left':
@@ -70,10 +112,6 @@ class Game2048 {
             if (this.score > this.bestScore) {
                 this.bestScore = this.score;
                 localStorage.setItem('best2048', this.bestScore.toString());
-                if (window.app && window.app.stats) {
-                    window.app.stats.bestScores['neuron-2048'] = this.bestScore;
-                    window.app.saveStats();
-                }
                 if (window.app && window.app.showNotification) {
                     window.app.showNotification('🎉 Новый рекорд!');
                 }
@@ -89,61 +127,43 @@ class Game2048 {
 
     moveLeft() {
         let moved = false;
-        for (let i = 0; i < 4; i++) {
-            const row = this.grid[i].filter(cell => cell !== 0);
-            for (let j = 0; j < row.length - 1; j++) {
-                if (row[j] === row[j + 1]) {
-                    row[j] *= 2;
-                    this.score += row[j];
-                    row.splice(j + 1, 1);
-                    moved = true;
-                }
+        for (let i = 0; i < this.size; i++) {
+            const row = this.grid[i];
+            const newRow = this.processRow(row);
+            if (JSON.stringify(row) !== JSON.stringify(newRow)) {
+                moved = true;
+                this.grid[i] = newRow;
             }
-            while (row.length < 4) row.push(0);
-            if (JSON.stringify(this.grid[i]) !== JSON.stringify(row)) moved = true;
-            this.grid[i] = row;
         }
         return moved;
     }
 
     moveRight() {
         let moved = false;
-        for (let i = 0; i < 4; i++) {
-            const row = this.grid[i].filter(cell => cell !== 0);
-            for (let j = row.length - 1; j > 0; j--) {
-                if (row[j] === row[j - 1]) {
-                    row[j] *= 2;
-                    this.score += row[j];
-                    row.splice(j - 1, 1);
-                    moved = true;
-                }
+        for (let i = 0; i < this.size; i++) {
+            const row = [...this.grid[i]].reverse();
+            const newRow = this.processRow(row).reverse();
+            if (JSON.stringify(this.grid[i]) !== JSON.stringify(newRow)) {
+                moved = true;
+                this.grid[i] = newRow;
             }
-            while (row.length < 4) row.unshift(0);
-            if (JSON.stringify(this.grid[i]) !== JSON.stringify(row)) moved = true;
-            this.grid[i] = row;
         }
         return moved;
     }
 
     moveUp() {
         let moved = false;
-        for (let j = 0; j < 4; j++) {
-            let column = [];
-            for (let i = 0; i < 4; i++) {
-                if (this.grid[i][j] !== 0) column.push(this.grid[i][j]);
+        for (let j = 0; j < this.size; j++) {
+            const column = [];
+            for (let i = 0; i < this.size; i++) {
+                column.push(this.grid[i][j]);
             }
-            for (let i = 0; i < column.length - 1; i++) {
-                if (column[i] === column[i + 1]) {
-                    column[i] *= 2;
-                    this.score += column[i];
-                    column.splice(i + 1, 1);
+            const newColumn = this.processRow(column);
+            for (let i = 0; i < this.size; i++) {
+                if (this.grid[i][j] !== newColumn[i]) {
                     moved = true;
+                    this.grid[i][j] = newColumn[i];
                 }
-            }
-            while (column.length < 4) column.push(0);
-            for (let i = 0; i < 4; i++) {
-                if (this.grid[i][j] !== column[i]) moved = true;
-                this.grid[i][j] = column[i];
             }
         }
         return moved;
@@ -151,42 +171,51 @@ class Game2048 {
 
     moveDown() {
         let moved = false;
-        for (let j = 0; j < 4; j++) {
-            let column = [];
-            for (let i = 0; i < 4; i++) {
-                if (this.grid[i][j] !== 0) column.push(this.grid[i][j]);
+        for (let j = 0; j < this.size; j++) {
+            const column = [];
+            for (let i = this.size - 1; i >= 0; i--) {
+                column.push(this.grid[i][j]);
             }
-            for (let i = column.length - 1; i > 0; i--) {
-                if (column[i] === column[i - 1]) {
-                    column[i] *= 2;
-                    this.score += column[i];
-                    column.splice(i - 1, 1);
+            const newColumn = this.processRow(column);
+            for (let i = 0; i < this.size; i++) {
+                if (this.grid[this.size - 1 - i][j] !== newColumn[i]) {
                     moved = true;
+                    this.grid[this.size - 1 - i][j] = newColumn[i];
                 }
-            }
-            while (column.length < 4) column.unshift(0);
-            for (let i = 0; i < 4; i++) {
-                if (this.grid[i][j] !== column[i]) moved = true;
-                this.grid[i][j] = column[i];
             }
         }
         return moved;
     }
 
+    processRow(row) {
+        const newRow = row.filter(cell => cell !== 0);
+        for (let i = 0; i < newRow.length - 1; i++) {
+            if (newRow[i] === newRow[i + 1]) {
+                newRow[i] *= 2;
+                this.score += newRow[i];
+                newRow.splice(i + 1, 1);
+            }
+        }
+        while (newRow.length < this.size) {
+            newRow.push(0);
+        }
+        return newRow;
+    }
+
     isGameOver() {
         // Check for empty cells
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
+        for (let i = 0; i < this.size; i++) {
+            for (let j = 0; j < this.size; j++) {
                 if (this.grid[i][j] === 0) return false;
             }
         }
 
         // Check for possible merges
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
+        for (let i = 0; i < this.size; i++) {
+            for (let j = 0; j < this.size; j++) {
                 const current = this.grid[i][j];
-                if ((i < 3 && current === this.grid[i + 1][j]) ||
-                    (j < 3 && current === this.grid[i][j + 1])) {
+                if ((i < this.size - 1 && current === this.grid[i + 1][j]) ||
+                    (j < this.size - 1 && current === this.grid[i][j + 1])) {
                     return false;
                 }
             }
@@ -201,8 +230,8 @@ class Game2048 {
 
         gridElement.innerHTML = '';
 
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
+        for (let i = 0; i < this.size; i++) {
+            for (let j = 0; j < this.size; j++) {
                 const tile = document.createElement('div');
                 tile.className = 'tile';
                 if (this.grid[i][j] !== 0) {
@@ -239,6 +268,7 @@ class MemoryGame {
         this.gameStarted = false;
         this.timer = 0;
         this.timerInterval = null;
+        this.size = 4;
     }
 
     init() {
@@ -250,6 +280,10 @@ class MemoryGame {
         this.flippedCards = [];
         this.gameStarted = false;
         this.timer = 0;
+        
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+        }
         
         this.render();
         this.updateDisplay();
@@ -365,7 +399,9 @@ class TypingGame {
         this.texts = [
             "Neuron Ecosystem создает инновационные проекты для образования и развлечений.",
             "Программирование это искусство создания цифровых миров и решения сложных задач.",
-            "Игры развивают логическое мышление, креативность и стратегическое планирование."
+            "Игры развивают логическое мышление, креативность и стратегическое планирование.",
+            "JavaScript является одним из самых популярных языков программирования в мире.",
+            "Современные веб-технологии позволяют создавать удивительные приложения."
         ];
         this.currentText = '';
         this.currentCharIndex = 0;
@@ -373,6 +409,7 @@ class TypingGame {
         this.timerInterval = null;
         this.timeLeft = 60;
         this.isPlaying = false;
+        this.errors = 0;
     }
 
     init() {
@@ -380,6 +417,7 @@ class TypingGame {
         this.currentCharIndex = 0;
         this.timeLeft = 60;
         this.isPlaying = false;
+        this.errors = 0;
         
         this.renderText();
         this.updateDisplay();
@@ -438,7 +476,12 @@ class TypingGame {
             }
             
             if (spans[this.currentCharIndex]) {
-                spans[this.currentCharIndex].className = inputChar === currentChar ? 'current-char' : 'current-char incorrect-char';
+                if (inputChar === currentChar) {
+                    spans[this.currentCharIndex].className = 'current-char';
+                } else {
+                    spans[this.currentCharIndex].className = 'current-char incorrect-char';
+                    this.errors++;
+                }
             }
             
             this.currentCharIndex++;
@@ -454,9 +497,10 @@ class TypingGame {
     completeText() {
         const timeTaken = (Date.now() - this.startTime) / 1000;
         const wpm = Math.round((this.currentText.split(' ').length / timeTaken) * 60);
+        const accuracy = Math.round(((this.currentText.length - this.errors) / this.currentText.length) * 100);
         
         if (window.app && window.app.showNotification) {
-            window.app.showNotification(`🎯 Скорость: ${wpm} слов/мин!`);
+            window.app.showNotification(`🎯 Скорость: ${wpm} слов/мин! Точность: ${accuracy}%`);
         }
         if (window.app && window.app.addXP) {
             window.app.addXP(5);
@@ -492,6 +536,10 @@ class TypingGame {
             const wpm = timeElapsed > 0 ? Math.round((this.currentCharIndex / 5) / (timeElapsed / 60)) : 0;
             document.getElementById('wpm').textContent = wpm;
         }
+        if (document.getElementById('accuracy')) {
+            const accuracy = this.currentCharIndex > 0 ? Math.round(((this.currentCharIndex - this.errors) / this.currentCharIndex) * 100) : 100;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+        }
         if (document.getElementById('timerTyping')) {
             document.getElementById('timerTyping').textContent = this.timeLeft;
         }
@@ -505,6 +553,7 @@ class MathGame {
         this.timeLeft = 30;
         this.timerInterval = null;
         this.isPlaying = false;
+        this.bestScore = parseInt(localStorage.getItem('bestMath') || '0');
     }
 
     init() {
@@ -554,6 +603,11 @@ class MathGame {
         if (input) {
             input.value = '';
             input.focus();
+            input.onkeypress = (e) => {
+                if (e.key === 'Enter') {
+                    this.checkAnswer(input.value);
+                }
+            };
         }
     }
 
@@ -572,7 +626,8 @@ class MathGame {
     checkAnswer(userAnswer) {
         if (!this.isPlaying) return;
 
-        if (parseInt(userAnswer) === this.currentProblem.answer) {
+        const answer = parseInt(userAnswer);
+        if (answer === this.currentProblem.answer) {
             this.score += 10;
             if (window.app && window.app.showNotification) {
                 window.app.showNotification('✅ Правильно! +10 очков');
@@ -593,6 +648,12 @@ class MathGame {
     endGame() {
         clearInterval(this.timerInterval);
         this.isPlaying = false;
+        
+        if (this.score > this.bestScore) {
+            this.bestScore = this.score;
+            localStorage.setItem('bestMath', this.bestScore.toString());
+        }
+        
         if (window.app && window.app.showNotification) {
             window.app.showNotification(`🏁 Игра окончена! Ваш счет: ${this.score}`);
         }
@@ -608,6 +669,9 @@ class MathGame {
         if (document.getElementById('mathTime')) {
             document.getElementById('mathTime').textContent = this.timeLeft;
         }
+        if (document.getElementById('mathBest')) {
+            document.getElementById('mathBest').textContent = this.bestScore;
+        }
     }
 }
 
@@ -618,6 +682,7 @@ class AimTrainer {
         this.timeLeft = 30;
         this.timerInterval = null;
         this.isPlaying = false;
+        this.bestScore = parseInt(localStorage.getItem('bestAim') || '0');
     }
 
     init() {
@@ -636,8 +701,9 @@ class AimTrainer {
         if (!container) return;
 
         container.innerHTML = `
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-secondary);">
-                Кликайте по появляющимся целям!
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-secondary); text-align: center;">
+                Кликайте по появляющимся целям!<br>
+                <small>На мобильных: тапайте по красным кружкам</small>
             </div>
         `;
 
@@ -655,29 +721,28 @@ class AimTrainer {
         const aimArea = document.getElementById('aimArea');
         const target = document.createElement('div');
         target.className = 'aim-target';
-        target.style.cssText = `
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: var(--danger-color);
-            border-radius: 50%;
-            cursor: pointer;
-        `;
+        
+        const size = Math.max(30, Math.min(50, aimArea.offsetWidth / 10));
+        target.style.width = size + 'px';
+        target.style.height = size + 'px';
 
-        const x = Math.random() * (aimArea.offsetWidth - 80) + 40;
-        const y = Math.random() * (aimArea.offsetHeight - 80) + 40;
+        const x = Math.random() * (aimArea.offsetWidth - size * 2) + size;
+        const y = Math.random() * (aimArea.offsetHeight - size * 2) + size;
         
         target.style.left = x + 'px';
         target.style.top = y + 'px';
 
-        target.addEventListener('click', (e) => {
+        const handleClick = (e) => {
             e.stopPropagation();
             this.score += 10;
             this.targetsClicked++;
             target.remove();
             this.createTarget();
             this.updateDisplay();
-        });
+        };
+
+        target.addEventListener('click', handleClick);
+        target.addEventListener('touchstart', handleClick, { passive: true });
 
         aimArea.appendChild(target);
 
@@ -707,6 +772,11 @@ class AimTrainer {
     endGame() {
         clearInterval(this.timerInterval);
         this.isPlaying = false;
+        
+        if (this.score > this.bestScore) {
+            this.bestScore = this.score;
+            localStorage.setItem('bestAim', this.bestScore.toString());
+        }
         
         if (window.app && window.app.showNotification) {
             window.app.showNotification(`🏁 Игра окончена! Счет: ${this.score}`);
@@ -854,6 +924,18 @@ const gameTemplates = {
                 <div class="grid-2048" id="grid2048"></div>
             </div>
             
+            <div class="touch-controls" id="touchControls2048">
+                <div></div>
+                <div class="touch-control" onclick="window.game2048?.move('up')">↑</div>
+                <div></div>
+                <div class="touch-control" onclick="window.game2048?.move('left')">←</div>
+                <div></div>
+                <div class="touch-control" onclick="window.game2048?.move('right')">→</div>
+                <div></div>
+                <div class="touch-control" onclick="window.game2048?.move('down')">↓</div>
+                <div></div>
+            </div>
+            
             <div class="game-controls">
                 <button class="btn btn-primary" onclick="start2048()">Новая игра</button>
                 <button class="btn btn-secondary" onclick="showInstructions2048()">Инструкция</button>
@@ -862,9 +944,9 @@ const gameTemplates = {
             <div id="instructions2048" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
                 <h4>🎮 Как играть в 2048:</h4>
                 <p>• Используйте <strong>стрелки клавиатуры</strong> для перемещения плиток</p>
+                <p>• На мобильных: <strong>свайпы</strong> или кнопки управления</p>
                 <p>• Когда две плитки с одинаковым числом соприкасаются, они сливаются в одну!</p>
                 <p>• Цель: получить плитку <strong>2048</strong></p>
-                <p>• Объединяйте плитки стратегически, чтобы не заполнить всё поле</p>
             </div>
         </div>
     `,
@@ -961,7 +1043,7 @@ const gameTemplates = {
             
             <div class="math-container">
                 <div class="math-problem" id="mathProblem">5 + 3 = ?</div>
-                <div style="display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div class="math-input-container">
                     <input type="number" class="math-input" id="mathAnswer" placeholder="Ответ">
                     <button class="btn btn-primary" onclick="checkMathAnswer()">Проверить</button>
                 </div>
@@ -975,7 +1057,7 @@ const gameTemplates = {
             <div id="instructionsMath" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
                 <h4>🎮 Как играть в Math Challenge:</h4>
                 <p>• Решайте математические примеры</p>
-                <p>• Вводите ответ в поле и нажимайте "Проверить"</p>
+                <p>• Вводите ответ в поле и нажимайте "Проверить" или Enter</p>
                 <p>• За правильный ответ: <strong>+10 очков</strong></p>
                 <p>• Цель: набрать максимум очков за 30 секунд</p>
             </div>
@@ -999,11 +1081,7 @@ const gameTemplates = {
                 </div>
             </div>
             
-            <div class="aim-container" id="aimArea">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-secondary);">
-                    Кликайте по появляющимся целям!
-                </div>
-            </div>
+            <div class="aim-container" id="aimArea"></div>
             
             <div class="game-controls">
                 <button class="btn btn-primary" onclick="startAimTrainer()">Новая игра</button>
