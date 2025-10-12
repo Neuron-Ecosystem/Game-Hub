@@ -987,42 +987,19 @@ const gameTemplates = {
         </div>
     `,
     
-    'typing-master': `
-        <div class="game-container">
-            <div class="game-stats">
-                <div class="game-stat">
-                    <div class="game-stat-value" id="wpm">0</div>
-                    <div class="game-stat-label">Слов/мин</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="accuracy">100%</div>
-                    <div class="game-stat-label">Точность</div>
-                </div>
-                <div class="game-stat">
-                    <div class="game-stat-value" id="timerTyping">60</div>
-                    <div class="game-stat-label">Секунды</div>
-                </div>
-            </div>
-            
-            <div class="typing-container">
-                <div class="typing-text" id="typingText"></div>
-                <input type="text" class="typing-input" id="typingInput" placeholder="Начните печатать здесь...">
-            </div>
-            
-            <div class="game-controls">
-                <button class="btn btn-primary" onclick="startTypingGame()">Новая игра</button>
-                <button class="btn btn-secondary" onclick="showInstructionsTyping()">Инструкция</button>
-            </div>
-            
-            <div id="instructionsTyping" style="display: none; margin-top: 20px; padding: 15px; background: var(--surface-light); border-radius: 8px;">
-                <h4>🎮 Как играть в Typing Master:</h4>
-                <p>• Печатайте текст, который видите на экране</p>
-                <p>• Следите за <strong>скоростью (WPM)</strong> и <strong>точностью</strong></p>
-                <p>• Игра длится 60 секунд</p>
-                <p>• Цель: набрать максимальную скорость с высокой точностью</p>
-            </div>
+// В секции gameTemplates замените 'typing-master' на:
+'typing-master': `
+    <div class="game-container">
+        <div style="text-align: center; padding: 40px;">
+            <div style="font-size: 4rem; margin-bottom: 20px;">⌨️</div>
+            <h3>Typing Master</h3>
+            <p>Скоро будет доступно!</p>
+            <p style="color: var(--text-secondary); margin-top: 20px;">Мы работаем над созданием увлекательной игры для тренировки скорости печати.</p>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">Следите за обновлениями!</p>
+            <button class="btn btn-primary" onclick="closeGameModal()" style="margin-top: 20px;">Вернуться к играм</button>
         </div>
-    `,
+    </div>
+`,,
 
     'math-challenge': `
         <div class="game-container">
