@@ -1,9 +1,178 @@
+// Import Firebase Functions
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
+import { 
+    getAuth, 
+    signInWithPopup, 
+    GoogleAuthProvider, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+// Firebase Config
+const firebaseConfig = {
+    apiKey: "AIzaSyDOaDVzzPjyYm4HWMND2XYWjLy_h4wty5s",
+    authDomain: "neuron-ecosystem-2025.firebaseapp.com",
+    projectId: "neuron-ecosystem-2025",
+    storageBucket: "neuron-ecosystem-2025.firebasestorage.app",
+    messagingSenderId: "589834476565",
+    appId: "1:589834476565:web:cd4db27c95950b7edd421c",
+    measurementId: "G-NSNQGK4THN"
+};
+
+// Initialize Firebase
+const appFirebase = initializeApp(firebaseConfig);
+const analytics = getAnalytics(appFirebase);
+const auth = getAuth(appFirebase);
+
+// Auth Manager Class
+class AuthManager {
+    constructor(gameHub) {
+        this.gameHub = gameHub;
+        this.authModal = document.getElementById('authModal');
+        this.user = null;
+        this.isLoginMode = true;
+        this.init();
+    }
+
+    init() {
+        this.setupEventListeners();
+        this.checkAuthState();
+    }
+
+    setupEventListeners() {
+        // Open/Close Modal
+        document.getElementById('openAuthBtn').addEventListener('click', () => this.openModal());
+        document.getElementById('closeAuthModal').addEventListener('click', () => this.closeModal());
+        document.getElementById('logoutBtn').addEventListener('click', () => this.handleLogout());
+
+        // Tab Switching
+        const tabs = document.querySelectorAll('.auth-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                this.isLoginMode = e.target.dataset.tab === 'login';
+                
+                // Update UI
+                tabs.forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                document.getElementById('authTitle').textContent = this.isLoginMode ? 'Вход в систему' : 'Регистрация';
+                document.getElementById('authSubmitBtn').textContent = this.isLoginMode ? 'Войти' : 'Зарегистрироваться';
+                document.getElementById('authError').textContent = '';
+            });
+        });
+
+        // Form Submit
+        document.getElementById('authForm').addEventListener('submit', (e) => this.handleEmailAuth(e));
+
+        // Google Login
+        document.getElementById('googleLoginBtn').addEventListener('click', () => this.handleGoogleLogin());
+    }
+
+    checkAuthState() {
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                this.user = user;
+                this.updateUIForUser(user);
+                this.closeModal();
+                if (window.app) window.app.showNotification(`👋 Добро пожаловать, ${user.displayName || user.email}!`);
+            } else {
+                this.user = null;
+                this.updateUIForGuest();
+            }
+        });
+    }
+
+    updateUIForUser(user) {
+        document.getElementById('authSection').style.display = 'none';
+        const userSection = document.getElementById('userSection');
+        userSection.style.display = 'flex';
+        
+        const userName = document.getElementById('userName');
+        const userAvatar = document.getElementById('userAvatar');
+
+        userName.textContent = user.displayName || user.email.split('@')[0];
+        
+        if (user.photoURL) {
+            userAvatar.src = user.photoURL;
+            userAvatar.style.display = 'block';
+        } else {
+            userAvatar.style.display = 'none';
+        }
+    }
+
+    updateUIForGuest() {
+        document.getElementById('authSection').style.display = 'flex';
+        document.getElementById('userSection').style.display = 'none';
+    }
+
+    openModal() {
+        this.authModal.classList.add('active');
+        document.getElementById('authError').textContent = '';
+    }
+
+    closeModal() {
+        this.authModal.classList.remove('active');
+    }
+
+    async handleEmailAuth(e) {
+        e.preventDefault();
+        const email = document.getElementById('authEmail').value;
+        const password = document.getElementById('authPassword').value;
+        const errorEl = document.getElementById('authError');
+
+        try {
+            if (this.isLoginMode) {
+                await signInWithEmailAndPassword(auth, email, password);
+            } else {
+                await createUserWithEmailAndPassword(auth, email, password);
+            }
+        } catch (error) {
+            console.error(error);
+            let msg = 'Произошла ошибка';
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+                msg = 'Неверный email или пароль';
+            } else if (error.code === 'auth/email-already-in-use') {
+                msg = 'Email уже используется';
+            } else if (error.code === 'auth/weak-password') {
+                msg = 'Пароль должен быть не менее 6 символов';
+            }
+            errorEl.textContent = msg;
+        }
+    }
+
+    async handleGoogleLogin() {
+        const provider = new GoogleAuthProvider();
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error(error);
+            document.getElementById('authError').textContent = 'Ошибка авторизации через Google';
+        }
+    }
+
+    async handleLogout() {
+        try {
+            await signOut(auth);
+            if (window.app) window.app.showNotification('Вы успешно вышли');
+        } catch (error) {
+            console.error(error);
+        }
+    }
+}
+
 // Main Application Logic
 class NeuronGameHub {
     constructor() {
         this.games = games;
         this.achievements = achievements;
         this.stats = this.loadStats();
+        
+        // Initialize Auth Manager
+        this.authManager = new AuthManager(this);
+        
         this.init();
     }
 
@@ -210,19 +379,20 @@ class NeuronGameHub {
         console.log('Initializing game:', gameId);
         switch(gameId) {
             case 'neuron-2048':
-                init2048();
+                // Check if init2048 exists globally (from games.js)
+                if (typeof init2048 === 'function') init2048();
                 break;
             case 'memory-cards':
-                initMemoryGame();
+                if (typeof initMemoryGame === 'function') initMemoryGame();
                 break;
             case 'typing-master':
-                initTypingGame();
+                if (typeof initTypingGame === 'function') initTypingGame();
                 break;
             case 'math-challenge':
-                initMathGame();
+                if (typeof initMathGame === 'function') initMathGame();
                 break;
             case 'aim-trainer':
-                initAimTrainer();
+                if (typeof initAimTrainer === 'function') initAimTrainer();
                 break;
             default:
                 console.log('Инициализация игры не требуется:', gameId);
@@ -231,6 +401,8 @@ class NeuronGameHub {
 
     trapFocus(modal) {
         const focusableElements = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusableElements.length === 0) return;
+
         const firstElement = focusableElements[0];
         const lastElement = focusableElements[focusableElements.length - 1];
 
@@ -429,127 +601,35 @@ class NeuronGameHub {
     }
 }
 
-// ==================== GAME FUNCTIONS ====================
+// Global functions for HTML onclick handlers
+// We attach them to window because modules have their own scope
+window.start2048 = function() { if (typeof window.game2048 !== 'undefined') window.game2048.init(); else if (typeof init2048 === 'function') init2048(); };
+window.startMemoryGame = function() { if (typeof window.memoryGame !== 'undefined') window.memoryGame.init(); else if (typeof initMemoryGame === 'function') initMemoryGame(); };
+window.startTypingGame = function() { if (typeof window.typingGame !== 'undefined') window.typingGame.init(); else if (typeof initTypingGame === 'function') initTypingGame(); };
+window.startMathGame = function() { if (typeof window.mathGame !== 'undefined') window.mathGame.init(); else if (typeof initMathGame === 'function') initMathGame(); };
+window.startAimTrainer = function() { if (typeof window.aimTrainer !== 'undefined') window.aimTrainer.init(); else if (typeof initAimTrainer === 'function') initAimTrainer(); };
 
-// 2048 Game
-function init2048() {
-    console.log('Initializing 2048...');
-    window.game2048 = new Game2048();
-    window.game2048.init();
-}
-
-function start2048() {
-    if (window.game2048) {
-        window.game2048.init();
-    } else {
-        init2048();
-    }
-}
-
-// Memory Game
-function initMemoryGame() {
-    console.log('Initializing Memory Game...');
-    window.memoryGame = new MemoryGame();
-    window.memoryGame.init();
-}
-
-function startMemoryGame() {
-    if (window.memoryGame) {
-        window.memoryGame.init();
-    } else {
-        initMemoryGame();
-    }
-}
-
-// Typing Game
-function initTypingGame() {
-    console.log('Initializing Typing Game...');
-    window.typingGame = new TypingGame();
-    window.typingGame.init();
-}
-
-function startTypingGame() {
-    if (window.typingGame) {
-        window.typingGame.init();
-    } else {
-        initTypingGame();
-    }
-}
-
-// Math Game
-function initMathGame() {
-    console.log('Initializing Math Game...');
-    window.mathGame = new MathGame();
-    window.mathGame.init();
-}
-
-function startMathGame() {
-    if (window.mathGame) {
-        window.mathGame.init();
-    } else {
-        initMathGame();
-    }
-}
-
-// Aim Trainer
-function initAimTrainer() {
-    console.log('Initializing Aim Trainer...');
-    window.aimTrainer = new AimTrainer();
-    window.aimTrainer.init();
-}
-
-function startAimTrainer() {
-    if (window.aimTrainer) {
-        window.aimTrainer.init();
-    } else {
-        initAimTrainer();
-    }
-}
-
-// Utility Functions
-function checkMathAnswer() {
+window.checkMathAnswer = function() { 
     const input = document.getElementById('mathAnswer');
     if (input && window.mathGame) {
         window.mathGame.checkAnswer(input.value);
     }
-}
+};
 
-function showInstructions2048() {
-    const element = document.getElementById('instructions2048');
+window.showInstructions2048 = function() { toggleDisplay('instructions2048'); };
+window.showInstructionsMemory = function() { toggleDisplay('instructionsMemory'); };
+window.showInstructionsTyping = function() { toggleDisplay('instructionsTyping'); };
+window.showInstructionsMath = function() { toggleDisplay('instructionsMath'); };
+window.showInstructionsAim = function() { toggleDisplay('instructionsAim'); };
+
+function toggleDisplay(id) {
+    const element = document.getElementById(id);
     if (element) {
         element.style.display = element.style.display === 'none' ? 'block' : 'none';
     }
 }
 
-function showInstructionsMemory() {
-    const element = document.getElementById('instructionsMemory');
-    if (element) {
-        element.style.display = element.style.display === 'none' ? 'block' : 'none';
-    }
-}
-
-function showInstructionsTyping() {
-    const element = document.getElementById('instructionsTyping');
-    if (element) {
-        element.style.display = element.style.display === 'none' ? 'block' : 'none';
-    }
-}
-
-function showInstructionsMath() {
-    const element = document.getElementById('instructionsMath');
-    if (element) {
-        element.style.display = element.style.display === 'none' ? 'block' : 'none';
-    }
-}
-
-function showInstructionsAim() {
-    const element = document.getElementById('instructionsAim');
-    if (element) {
-        element.style.display = element.style.display === 'none' ? 'block' : 'none';
-    }
-}
-
-function closeGameModal() {
+window.closeGameModal = function() {
     const modal = document.getElementById('gameModal');
     if (modal) {
         modal.classList.remove('active');
@@ -557,30 +637,24 @@ function closeGameModal() {
     }
     
     // Stop all game timers
-    if (window.memoryGame && window.memoryGame.timerInterval) {
-        clearInterval(window.memoryGame.timerInterval);
-    }
-    if (window.typingGame && window.typingGame.timerInterval) {
-        clearInterval(window.typingGame.timerInterval);
-    }
-    if (window.mathGame && window.mathGame.timerInterval) {
-        clearInterval(window.mathGame.timerInterval);
-    }
-    if (window.aimTrainer && window.aimTrainer.timerInterval) {
-        clearInterval(window.aimTrainer.timerInterval);
-    }
-}
+    if (window.memoryGame && window.memoryGame.timerInterval) clearInterval(window.memoryGame.timerInterval);
+    if (window.typingGame && window.typingGame.timerInterval) clearInterval(window.typingGame.timerInterval);
+    if (window.mathGame && window.mathGame.timerInterval) clearInterval(window.mathGame.timerInterval);
+    if (window.aimTrainer && window.aimTrainer.timerInterval) clearInterval(window.aimTrainer.timerInterval);
+};
 
 // Close modal when clicking outside or pressing Escape
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
-        closeGameModal();
+        if (e.target.id === 'gameModal') window.closeGameModal();
+        if (e.target.id === 'authModal') document.getElementById('authModal').classList.remove('active');
     }
 });
 
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.getElementById('gameModal').classList.contains('active')) {
-        closeGameModal();
+    if (e.key === 'Escape') {
+        if (document.getElementById('gameModal').classList.contains('active')) window.closeGameModal();
+        if (document.getElementById('authModal').classList.contains('active')) document.getElementById('authModal').classList.remove('active');
     }
 });
 
@@ -591,16 +665,3 @@ document.addEventListener('DOMContentLoaded', () => {
     app = new NeuronGameHub();
     window.app = app;
 });
-
-// Service Worker for PWA (optional)
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-                console.log('ServiceWorker registration successful');
-            })
-            .catch(function(err) {
-                console.log('ServiceWorker registration failed: ', err);
-            });
-    });
-}
