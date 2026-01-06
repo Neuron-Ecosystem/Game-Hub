@@ -10,6 +10,12 @@ import {
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, 
+    getDoc, 
+    setDoc 
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 // Firebase Config
 const firebaseConfig = {
@@ -26,6 +32,7 @@ const firebaseConfig = {
 const appFirebase = initializeApp(firebaseConfig);
 const analytics = getAnalytics(appFirebase);
 const auth = getAuth(appFirebase);
+const db = getFirestore(appFirebase);
 
 // Auth Manager Class
 class AuthManager {
@@ -72,11 +79,15 @@ class AuthManager {
     }
 
     checkAuthState() {
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
                 this.user = user;
                 this.updateUIForUser(user);
                 this.closeModal();
+                
+                // SYNC DATA: Load from cloud when user logs in
+                await this.gameHub.syncWithCloud(user);
+                
                 if (window.app) window.app.showNotification(`👋 Добро пожаловать, ${user.displayName || user.email}!`);
             } else {
                 this.user = null;
@@ -132,7 +143,7 @@ class AuthManager {
         } catch (error) {
             console.error(error);
             let msg = 'Произошла ошибка';
-            if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
                 msg = 'Неверный email или пароль';
             } else if (error.code === 'auth/email-already-in-use') {
                 msg = 'Email уже используется';
@@ -156,7 +167,11 @@ class AuthManager {
     async handleLogout() {
         try {
             await signOut(auth);
+            // On logout, we might want to keep the current data in local storage 
+            // or clear it depending on preference. Usually keeping it is safer for UX.
             if (window.app) window.app.showNotification('Вы успешно вышли');
+            // Reload page to reset game states ensures clean slate
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
             console.error(error);
         }
@@ -168,7 +183,8 @@ class NeuronGameHub {
     constructor() {
         this.games = games;
         this.achievements = achievements;
-        this.stats = this.loadStats();
+        // Load initial stats from LocalStorage (fastest)
+        this.stats = this.loadLocalStats();
         
         // Initialize Auth Manager
         this.authManager = new AuthManager(this);
@@ -181,7 +197,7 @@ class NeuronGameHub {
         this.displayAchievements();
         this.setupEventListeners();
         this.updateStatsDisplay();
-        this.loadAchievements();
+        this.loadAchievements(); // Local load
         
         // Initialize service worker for PWA capabilities
         this.initServiceWorker();
@@ -195,12 +211,51 @@ class NeuronGameHub {
         }
     }
 
-    loadStats() {
+    // New Method: Sync with Cloud Firestore
+    async syncWithCloud(user) {
+        if (!user) return;
+
+        try {
+            const userDocRef = doc(db, "users", user.uid);
+            const docSnap = await getDoc(userDocRef);
+
+            if (docSnap.exists()) {
+                // Case 1: User has data in cloud -> Download and overwrite local
+                console.log("Found user data in cloud. Syncing...");
+                const cloudData = docSnap.data();
+                
+                this.stats = cloudData.stats || this.stats;
+                
+                // Merge achievements: unlock if unlocked in cloud OR locally
+                if (cloudData.achievements) {
+                    this.achievements = this.achievements.map(localAch => {
+                        const cloudAch = cloudData.achievements.find(a => a.id === localAch.id);
+                        if (cloudAch && cloudAch.unlocked) {
+                            return { ...localAch, unlocked: true };
+                        }
+                        return localAch;
+                    });
+                }
+                
+                this.saveLocalStats(); // Save cloud data to local storage for offline use
+                this.updateStatsDisplay();
+                this.displayAchievements();
+                this.showNotification("☁️ Прогресс синхронизирован!");
+            } else {
+                // Case 2: User is new in cloud -> Upload local Guest data to cloud
+                console.log("New cloud user. Uploading local progress...");
+                await this.saveStatsToCloud();
+            }
+        } catch (e) {
+            console.error("Error syncing with cloud:", e);
+        }
+    }
+
+    loadLocalStats() {
         try {
             const saved = localStorage.getItem('neuronGameHubStats');
             if (saved) {
                 const stats = JSON.parse(saved);
-                // Ensure all required fields exist
                 return {
                     totalGamesPlayed: stats.totalGamesPlayed || 0,
                     bestScores: stats.bestScores || {},
@@ -226,11 +281,37 @@ class NeuronGameHub {
         };
     }
 
-    saveStats() {
+    // Unified Save Method
+    async saveStats() {
+        // 1. Always save to Local Storage (fast, offline)
+        this.saveLocalStats();
+
+        // 2. If User is logged in, save to Cloud (async)
+        await this.saveStatsToCloud();
+    }
+
+    saveLocalStats() {
         try {
             localStorage.setItem('neuronGameHubStats', JSON.stringify(this.stats));
         } catch (e) {
-            console.log('Не удалось сохранить статистику');
+            console.log('Не удалось сохранить статистику локально');
+        }
+    }
+
+    async saveStatsToCloud() {
+        const user = auth.currentUser;
+        if (!user) return; // Guest mode - do nothing
+
+        try {
+            const userDocRef = doc(db, "users", user.uid);
+            await setDoc(userDocRef, {
+                stats: this.stats,
+                achievements: this.achievements.map(a => ({ id: a.id, unlocked: a.unlocked })), // Save minimal achievement data
+                lastUpdated: new Date()
+            }, { merge: true });
+            console.log("Saved to cloud");
+        } catch (e) {
+            console.error("Error saving to cloud:", e);
         }
     }
 
@@ -252,6 +333,8 @@ class NeuronGameHub {
     saveAchievements() {
         try {
             localStorage.setItem('neuronGameAchievements', JSON.stringify(this.achievements));
+            // Trigger cloud save as well because achievements changed
+            this.saveStatsToCloud();
         } catch (e) {
             console.log('Не удалось сохранить достижения');
         }
@@ -330,7 +413,7 @@ class NeuronGameHub {
             this.stats.gamesPlayed[gameId] = 0;
         }
         this.stats.gamesPlayed[gameId]++;
-        this.saveStats();
+        this.saveStats(); // Now saves to Cloud if logged in
         this.updateStatsDisplay();
 
         // Unlock first game achievement
@@ -430,7 +513,7 @@ class NeuronGameHub {
         if (achievement && !achievement.unlocked) {
             achievement.unlocked = true;
             this.stats.achievementsUnlocked++;
-            this.saveAchievements();
+            this.saveAchievements(); // Saves to local + cloud
             this.displayAchievements();
             this.showNotification(`🎉 Достижение разблокировано: ${achievement.title}!`);
             this.addXP(25);
@@ -568,7 +651,7 @@ class NeuronGameHub {
             this.showNotification(`🎉 Поздравляем! Вы достигли ${this.stats.playerLevel} уровня!`);
         }
         
-        this.saveStats();
+        this.saveStats(); // Now saves to Cloud if logged in
         this.updateStatsDisplay();
     }
 
@@ -602,7 +685,6 @@ class NeuronGameHub {
 }
 
 // Global functions for HTML onclick handlers
-// We attach them to window because modules have their own scope
 window.start2048 = function() { if (typeof window.game2048 !== 'undefined') window.game2048.init(); else if (typeof init2048 === 'function') init2048(); };
 window.startMemoryGame = function() { if (typeof window.memoryGame !== 'undefined') window.memoryGame.init(); else if (typeof initMemoryGame === 'function') initMemoryGame(); };
 window.startTypingGame = function() { if (typeof window.typingGame !== 'undefined') window.typingGame.init(); else if (typeof initTypingGame === 'function') initTypingGame(); };
