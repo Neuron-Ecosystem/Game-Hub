@@ -65,7 +65,8 @@ body {
 
 .nav {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    gap: 15px;
     flex-wrap: wrap;
 }
 
@@ -84,6 +85,139 @@ body {
     color: var(--primary-color);
     border-color: var(--primary-color);
     background: rgba(99, 102, 241, 0.1);
+}
+
+/* Auth Styles */
+.auth-section, .user-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 15px;
+    border-right: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+    .auth-section, .user-section {
+        border-right: none;
+        padding-right: 0;
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 10px;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--primary-color);
+}
+
+.auth-modal-content {
+    max-width: 400px;
+}
+
+.auth-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.auth-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    padding: 10px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.auth-tab.active {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.btn-full {
+    width: 100%;
+}
+
+.auth-divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+}
+
+.auth-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    z-index: 1;
+}
+
+.auth-divider span {
+    background: var(--surface);
+    padding: 0 10px;
+    color: var(--text-secondary);
+    position: relative;
+    z-index: 2;
+    font-size: 0.9rem;
+}
+
+.google-btn {
+    width: 100%;
+    background: white;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px solid #ddd;
+}
+
+.google-btn:hover {
+    background: #f1f1f1;
+    transform: translateY(-2px);
+}
+
+.auth-error {
+    color: var(--danger-color);
+    font-size: 0.9rem;
+    text-align: center;
+    min-height: 20px;
 }
 
 /* Quick Stats */
