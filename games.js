@@ -1110,3 +1110,34 @@ const gameTemplates = {
         </div>
     `
 };
+
+// Global init functions for specific games (referenced by name in string above)
+function init2048() {
+    console.log('Initializing 2048...');
+    window.game2048 = new Game2048();
+    window.game2048.init();
+}
+
+function initMemoryGame() {
+    console.log('Initializing Memory Game...');
+    window.memoryGame = new MemoryGame();
+    window.memoryGame.init();
+}
+
+function initTypingGame() {
+    console.log('Initializing Typing Game...');
+    window.typingGame = new TypingGame();
+    window.typingGame.init();
+}
+
+function initMathGame() {
+    console.log('Initializing Math Game...');
+    window.mathGame = new MathGame();
+    window.mathGame.init();
+}
+
+function initAimTrainer() {
+    console.log('Initializing Aim Trainer...');
+    window.aimTrainer = new AimTrainer();
+    window.aimTrainer.init();
+}
