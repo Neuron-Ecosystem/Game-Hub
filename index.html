@@ -9,20 +9,31 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <header class="header">
             <div class="logo">
                 <h1>Neuron Game Hub</h1>
                 <span>Играй • Развивайся • Побеждай</span>
             </div>
+            
             <nav class="nav">
+                <div id="authSection" class="auth-section">
+                    <button id="openAuthBtn" class="btn btn-sm btn-primary">Войти / Регистрация</button>
+                </div>
+                
+                <div id="userSection" class="user-section" style="display: none;">
+                    <div class="user-info">
+                        <img id="userAvatar" src="" alt="Avatar" class="user-avatar" style="display: none;">
+                        <span id="userName">Игрок</span>
+                    </div>
+                    <button id="logoutBtn" class="btn btn-sm btn-secondary">Выйти</button>
+                </div>
+
                 <a href="#games" class="nav-link active">Все игры</a>
                 <a href="#stats" class="nav-link">Моя статистика</a>
                 <a href="#achievements" class="nav-link">Достижения</a>
             </nav>
         </header>
 
-        <!-- Quick Stats -->
         <div class="quick-stats">
             <div class="stat-card">
                 <span class="stat-label">Всего игр</span>
@@ -38,7 +49,6 @@
             </div>
         </div>
 
-        <!-- Games Grid -->
         <main class="main-content">
             <section id="games" class="section active">
                 <div class="section-header">
@@ -49,11 +59,9 @@
                 </div>
                 
                 <div class="games-grid" id="gamesContainer">
-                    <!-- Games will be loaded here -->
-                </div>
+                    </div>
             </section>
 
-            <!-- Statistics Section -->
             <section id="stats" class="section">
                 <div class="section-header">
                     <h2>Моя игровая статистика</h2>
@@ -78,19 +86,56 @@
                 </div>
             </section>
 
-            <!-- Achievements Section -->
             <section id="achievements" class="section">
                 <div class="section-header">
                     <h2>Достижения</h2>
                 </div>
                 <div class="achievements-grid" id="achievementsContainer">
-                    <!-- Achievements will be loaded here -->
-                </div>
+                    </div>
             </section>
         </main>
     </div>
 
-    <!-- Game Modals -->
+    <div id="authModal" class="modal">
+        <div class="modal-content auth-modal-content">
+            <div class="modal-header">
+                <h3 id="authTitle">Вход в систему</h3>
+                <button class="close-btn" id="closeAuthModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="auth-tabs">
+                    <button class="auth-tab active" data-tab="login">Вход</button>
+                    <button class="auth-tab" data-tab="register">Регистрация</button>
+                </div>
+                
+                <form id="authForm" class="auth-form">
+                    <div class="form-group">
+                        <input type="email" id="authEmail" placeholder="Email" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="authPassword" placeholder="Пароль" required minlength="6">
+                    </div>
+                    <p id="authError" class="auth-error"></p>
+                    <button type="submit" class="btn btn-primary btn-full" id="authSubmitBtn">Войти</button>
+                </form>
+
+                <div class="auth-divider">
+                    <span>или</span>
+                </div>
+
+                <button id="googleLoginBtn" class="btn google-btn">
+                    <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill-rule="evenodd" fill-opacity="1" fill="#4285f4" stroke="none"></path>
+                        <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.836.86-3.048.86-2.344 0-4.328-1.584-5.036-3.715H.957v2.332A8.997 8.997 0 0 0 9 18z" fill-rule="evenodd" fill-opacity="1" fill="#34a853" stroke="none"></path>
+                        <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill-rule="evenodd" fill-opacity="1" fill="#fbbc05" stroke="none"></path>
+                        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill-rule="evenodd" fill-opacity="1" fill="#ea4335" stroke="none"></path>
+                    </svg>
+                    Войти через Google
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="gameModal" class="modal">
         <div class="modal-content game-modal">
             <div class="modal-header">
@@ -98,12 +143,11 @@
                 <button class="close-btn" onclick="closeGameModal()">×</button>
             </div>
             <div class="modal-body" id="gameContent">
-                <!-- Game content will be loaded here -->
-            </div>
+                </div>
         </div>
     </div>
 
     <script src="games.js"></script>
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
